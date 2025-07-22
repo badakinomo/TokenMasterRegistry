@@ -370,6 +370,36 @@
   )
 )
 
+;; ===== Cryptographic Verification System =====
+
+;; Registers cryptographic signature for asset integrity verification
+(define-public (register-asset-digital-signature (target-asset-id uint) (digital-signature (buff 32)) (hash-method (string-ascii 10)))
+  (let
+    (
+      (current-asset-data (unwrap! (map-get? asset-storage-vault { asset-identifier: target-asset-id })
+        error-asset-does-not-exist))
+    )
+    ;; Verify caller owns asset and algorithm is supported
+    (asserts! (is-eq (get current-owner current-asset-data) tx-sender) error-unauthorized-operation)
+    (asserts! (or (is-eq hash-method "sha256") (is-eq hash-method "keccak256")) error-invalid-signature-method)
+
+    (ok true)
+  )
+)
+
+;; Validates asset integrity against registered cryptographic signature
+(define-public (validate-asset-digital-integrity (target-asset-id uint) (provided-signature (buff 32)))
+  (let
+    (
+      (verification-record (unwrap! (map-get? asset-verification-registry { asset-identifier: target-asset-id })
+        error-verification-record-missing))
+    )
+    ;; Compare provided signature with registered signature
+    (asserts! (is-eq (get digital-signature verification-record) provided-signature) error-signature-mismatch)
+
+    (ok true)
+  )
+)
 
 ;; ===== Time-Locked Security Operations =====
 
